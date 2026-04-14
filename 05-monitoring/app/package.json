@@ -1,0 +1,9 @@
+{
+  "name": "my-saas-app-monitoring-snippet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Snippet showing the applicationinsights dependency added in EP 5. Install with: npm install applicationinsights",
+  "dependencies": {
+    "applicationinsights": "^3.0.0"
+  }
+}
