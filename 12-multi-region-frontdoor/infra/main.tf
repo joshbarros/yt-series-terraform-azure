@@ -22,7 +22,7 @@ provider "azurerm" {
 }
 
 locals {
-  project = "theitguy-saas"
+  workload = "theitguy-saas"
 
   regions = {
     primary = {
@@ -40,14 +40,14 @@ locals {
   common_tags = {
     Environment = "prod"
     Owner       = "theitguy"
-    Project     = local.project
+    Project     = local.workload
     ManagedBy   = "Terraform"
     Topology    = "multi-region"
   }
 }
 
 resource "azurerm_resource_group" "main" {
-  name     = "rg-${local.project}-global"
+  name     = "rg-${local.workload}-global"
   location = local.regions.primary.name
   tags     = local.common_tags
 }
@@ -55,7 +55,7 @@ resource "azurerm_resource_group" "main" {
 # Per-region web app (loop with for_each)
 resource "azurerm_service_plan" "regional" {
   for_each            = local.regions
-  name                = "asp-${local.project}-${each.key}"
+  name                = "asp-${local.workload}-${each.key}"
   resource_group_name = azurerm_resource_group.main.name
   location            = each.value.name
   os_type             = "Linux"
@@ -65,7 +65,7 @@ resource "azurerm_service_plan" "regional" {
 
 resource "azurerm_linux_web_app" "regional" {
   for_each            = local.regions
-  name                = "app-${local.project}-${each.key}"
+  name                = "app-${local.workload}-${each.key}"
   resource_group_name = azurerm_resource_group.main.name
   location            = each.value.name
   service_plan_id     = azurerm_service_plan.regional[each.key].id
@@ -75,8 +75,9 @@ resource "azurerm_linux_web_app" "regional" {
     application_stack {
       node_version = "20-lts"
     }
-    always_on         = true
-    health_check_path = "/api/health"
+    always_on                         = true
+    health_check_path                 = "/api/health"
+    health_check_eviction_time_in_min = 5
   }
 
   tags = local.common_tags
@@ -84,14 +85,14 @@ resource "azurerm_linux_web_app" "regional" {
 
 # --- Front Door ---
 resource "azurerm_cdn_frontdoor_profile" "main" {
-  name                = "fd-${local.project}"
+  name                = "fd-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
   sku_name            = "Standard_AzureFrontDoor"
   tags                = local.common_tags
 }
 
 resource "azurerm_cdn_frontdoor_endpoint" "main" {
-  name                     = "fde-${local.project}"
+  name                     = "fde-${local.workload}"
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
 }
 

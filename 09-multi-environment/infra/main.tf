@@ -34,26 +34,26 @@ variable "db_password" {
 }
 
 locals {
-  project = "theitguy-saas"
-  suffix  = var.environment
+  workload = "theitguy-saas"
+  suffix   = var.environment
 
   common_tags = {
     Environment = var.environment
     Owner       = "theitguy"
-    Project     = local.project
+    Project     = local.workload
     ManagedBy   = "Terraform"
     Workspace   = terraform.workspace
   }
 }
 
 resource "azurerm_resource_group" "main" {
-  name     = "rg-${local.project}-${local.suffix}"
+  name     = "rg-${local.workload}-${local.suffix}"
   location = var.location
   tags     = local.common_tags
 }
 
 resource "azurerm_service_plan" "main" {
-  name                = "asp-${local.project}-${local.suffix}"
+  name                = "asp-${local.workload}-${local.suffix}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"

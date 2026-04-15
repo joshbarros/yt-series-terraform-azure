@@ -1,5 +1,9 @@
 // EP6 — Custom Domain + Free Managed SSL on App Service
 //
+// ⚠️  APPEND-PATTERN: This file is NOT standalone runnable.
+//     These resources EXTEND the EP5 main.tf — copy them INTO your
+//     existing infra/main.tf (or alongside it in the same directory).
+//
 // Prerequisites:
 //   - You own a domain (Cloudflare/Namecheap/etc.)
 //   - An EP5 deployment is live (web app + RG already exist)

@@ -1,4 +1,8 @@
 // EP10 — Cost guardrails: budgets, alerts, and dev auto-shutdown.
+//
+// ⚠️  APPEND-PATTERN: This file is NOT standalone runnable.
+//     These resources EXTEND the EP9 multi-environment main.tf —
+//     copy them INTO your existing infra/main.tf.
 
 variable "monthly_budget_usd" {
   type    = number
@@ -12,7 +16,7 @@ variable "budget_alert_emails" {
 
 # --- Budget at the resource group ---
 resource "azurerm_consumption_budget_resource_group" "main" {
-  name              = "budget-${local.project}"
+  name              = "budget-${local.workload}"
   resource_group_id = azurerm_resource_group.main.id
   amount            = var.monthly_budget_usd
   time_grain        = "Monthly"
@@ -69,7 +73,7 @@ resource "azurerm_logic_app_workflow" "stop_dev_appsvc" {
 
 # --- Cost anomaly alert (catches 3x baseline spikes) ---
 resource "azurerm_monitor_action_group" "cost" {
-  name                = "ag-${local.project}-cost"
+  name                = "ag-${local.workload}-cost"
   resource_group_name = azurerm_resource_group.main.name
   short_name          = "cost"
 

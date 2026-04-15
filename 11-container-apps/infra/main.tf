@@ -22,26 +22,26 @@ provider "azurerm" {
 }
 
 locals {
-  project  = "theitguy-saas"
+  workload = "theitguy-saas"
   location = "westus2"
 
   common_tags = {
     Environment = "dev"
     Owner       = "theitguy"
-    Project     = local.project
+    Project     = local.workload
     ManagedBy   = "Terraform"
     Compute     = "container-apps"
   }
 }
 
 resource "azurerm_resource_group" "main" {
-  name     = "rg-${local.project}-aca"
+  name     = "rg-${local.workload}-aca"
   location = local.location
   tags     = local.common_tags
 }
 
 resource "azurerm_log_analytics_workspace" "main" {
-  name                = "log-${local.project}-aca"
+  name                = "log-${local.workload}-aca"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = "PerGB2018"
@@ -50,7 +50,7 @@ resource "azurerm_log_analytics_workspace" "main" {
 }
 
 resource "azurerm_container_app_environment" "main" {
-  name                       = "cae-${local.project}"
+  name                       = "cae-${local.workload}"
   resource_group_name        = azurerm_resource_group.main.name
   location                   = azurerm_resource_group.main.location
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
@@ -58,7 +58,7 @@ resource "azurerm_container_app_environment" "main" {
 }
 
 resource "azurerm_container_app" "nextjs" {
-  name                         = "ca-${local.project}-web"
+  name                         = "ca-${local.workload}-web"
   container_app_environment_id = azurerm_container_app_environment.main.id
   resource_group_name          = azurerm_resource_group.main.name
   revision_mode                = "Single"
@@ -69,8 +69,11 @@ resource "azurerm_container_app" "nextjs" {
     max_replicas = 5
 
     container {
-      name   = "web"
-      image  = "ghcr.io/${var.github_user}/nextjs-saas:latest"
+      name = "web"
+      # Default to the Microsoft public quickstart image so the lab runs without
+      # requiring a Docker push. Replace with `ghcr.io/${var.github_user}/nextjs-saas:latest`
+      # once you've built and pushed your own image (see EP 11 script).
+      image  = var.container_image
       cpu    = 0.5
       memory = "1Gi"
 
@@ -99,7 +102,15 @@ resource "azurerm_container_app" "nextjs" {
 }
 
 variable "github_user" {
-  type = string
+  type        = string
+  description = "Your GitHub username (used when you switch to your own image)"
+  default     = "joshbarros"
+}
+
+variable "container_image" {
+  type        = string
+  description = "Container image to deploy. Defaults to MS public quickstart for first run."
+  default     = "mcr.microsoft.com/k8se/quickstart:latest"
 }
 
 output "app_url" {

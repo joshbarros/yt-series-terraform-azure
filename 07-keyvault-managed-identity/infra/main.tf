@@ -1,12 +1,16 @@
 // EP7 — Azure Key Vault + Managed Identity (kill all secrets)
 //
+// ⚠️  APPEND-PATTERN: This file is NOT standalone runnable.
+//     These resources EXTEND the EP5 main.tf — copy them INTO your
+//     existing infra/main.tf alongside the existing web app + RG.
+//
 // Replaces var.db_password being passed into app_settings as plaintext.
 // Web app pulls DATABASE_URL from Key Vault using its System-Assigned Managed Identity.
 
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "main" {
-  name                       = "kv-${local.project}-${substr(md5(azurerm_resource_group.main.id), 0, 6)}"
+  name                       = "kv-${local.workload}-${substr(md5(azurerm_resource_group.main.id), 0, 6)}"
   resource_group_name        = azurerm_resource_group.main.name
   location                   = azurerm_resource_group.main.location
   tenant_id                  = data.azurerm_client_config.current.tenant_id
