@@ -1,3 +1,4 @@
+# Docs: https://developer.hashicorp.com/terraform/language/settings
 terraform {
   required_version = ">= 1.5"
 
@@ -13,6 +14,8 @@ provider "azurerm" {
   features {}
 }
 
+# Docs: https://developer.hashicorp.com/terraform/language/values/variables
+# Sensitive input — never printed in CLI output or state logs.
 variable "db_password" {
   type        = string
   description = "Admin password for PostgreSQL Flexible Server"
@@ -39,6 +42,8 @@ locals {
   }
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group
+# Manages an Azure Resource Group — a logical container for related Azure resources.
 resource "azurerm_resource_group" "main" {
   name     = "rg-${local.workload}"
   location = local.location
@@ -47,27 +52,35 @@ resource "azurerm_resource_group" "main" {
 
 # --- Observability foundation ---
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/log_analytics_workspace
+# Manages a Log Analytics Workspace — the central storage layer for all logs and metrics.
+# Every diagnostic setting, App Insights instance, and alert query reads from here.
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "log-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
-  sku                 = "PerGB2018"
-  retention_in_days   = 30
+  sku                 = "PerGB2018" # Pay-per-GB ingestion model
+  retention_in_days   = 30          # How long data is queryable (1–730 days)
   tags                = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/application_insights
+# Manages an Application Insights component — collects request traces, exceptions, and performance data.
+# Must be "workspace-based" (linked to Log Analytics). Classic mode is deprecated.
 resource "azurerm_application_insights" "main" {
   name                = "ai-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
-  workspace_id        = azurerm_log_analytics_workspace.main.id
-  application_type    = "web"
+  workspace_id        = azurerm_log_analytics_workspace.main.id # Links to LA for storage
+  application_type    = "web"                                   # Optimizes dashboards for web metrics
   retention_in_days   = 90
   tags                = local.common_tags
 }
 
 # --- Compute (with telemetry wiring) ---
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/service_plan
+# Manages an App Service Plan — the compute layer (VM) that runs your web app.
 resource "azurerm_service_plan" "main" {
   name                = "asp-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
@@ -77,6 +90,8 @@ resource "azurerm_service_plan" "main" {
   tags                = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_web_app
+# Manages a Linux Web App (App Service) — the application itself.
 resource "azurerm_linux_web_app" "main" {
   name                = "app-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
@@ -105,6 +120,8 @@ resource "azurerm_linux_web_app" "main" {
     health_check_eviction_time_in_min = 5
   }
 
+  # APPLICATIONINSIGHTS_CONNECTION_STRING is auto-read by the App Insights SDK
+  # when the app starts (via instrumentation.ts). No manual wiring in code.
   app_settings = {
     WEBSITE_NODE_DEFAULT_VERSION          = "~20"
     SCM_DO_BUILD_DURING_DEPLOYMENT        = "true"
@@ -115,23 +132,27 @@ resource "azurerm_linux_web_app" "main" {
   tags = local.common_tags
 }
 
-# Stream platform logs + metrics to Log Analytics for queryability and retention.
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_diagnostic_setting
+# Manages a Diagnostic Setting — streams platform logs and metrics from a resource to Log Analytics.
+# This captures App Service HTTP logs, deployment logs, and platform metrics.
 resource "azurerm_monitor_diagnostic_setting" "webapp" {
   name                       = "diag-app-${local.workload}"
   target_resource_id         = azurerm_linux_web_app.main.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
 
   enabled_log {
-    category_group = "allLogs"
+    category_group = "allLogs" # Capture all available log categories
   }
 
   enabled_metric {
-    category = "AllMetrics"
+    category = "AllMetrics" # Capture CPU, memory, request count, etc.
   }
 }
 
 # --- PostgreSQL ---
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server
+# Manages an Azure Database for PostgreSQL Flexible Server.
 resource "azurerm_postgresql_flexible_server" "main" {
   name                = "psql-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
@@ -159,12 +180,16 @@ resource "azurerm_postgresql_flexible_server" "main" {
   }
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server_configuration
+# Forces all client connections to use TLS — blocks plaintext connections.
 resource "azurerm_postgresql_flexible_server_configuration" "require_secure_transport" {
   name      = "require_secure_transport"
   server_id = azurerm_postgresql_flexible_server.main.id
   value     = "ON"
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server_firewall_rule
+# Allows Azure-hosted services (like App Service) to connect to the database.
 resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure" {
   name             = "AllowAzureServices"
   server_id        = azurerm_postgresql_flexible_server.main.id
@@ -172,6 +197,8 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure" {
   end_ip_address   = "0.0.0.0"
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server_database
+# Manages a database within a PostgreSQL Flexible Server.
 resource "azurerm_postgresql_flexible_server_database" "main" {
   name      = "saasdb"
   server_id = azurerm_postgresql_flexible_server.main.id
@@ -179,6 +206,7 @@ resource "azurerm_postgresql_flexible_server_database" "main" {
   collation = "en_US.utf8"
 }
 
+# Diagnostic setting for Postgres — captures slow queries, connection logs, errors.
 resource "azurerm_monitor_diagnostic_setting" "postgres" {
   name                       = "diag-psql-${local.workload}"
   target_resource_id         = azurerm_postgresql_flexible_server.main.id
@@ -195,30 +223,35 @@ resource "azurerm_monitor_diagnostic_setting" "postgres" {
 
 # --- Alerting ---
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_action_group
+# Manages a Monitor Action Group — defines WHO gets notified and HOW (email, SMS, webhook, etc.).
 resource "azurerm_monitor_action_group" "critical" {
   name                = "ag-${local.workload}-critical"
   resource_group_name = azurerm_resource_group.main.name
-  short_name          = "critical"
+  short_name          = "critical" # Max 12 chars — shown in SMS messages
   enabled             = true
 
   email_receiver {
     name                    = "owner"
     email_address           = var.alert_email
-    use_common_alert_schema = true
+    use_common_alert_schema = true # Standardized JSON payload across all alert types
   }
 
   tags = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_metric_alert
+# Manages a Metric Alert — fires when a metric crosses a threshold over a time window.
+# Alert #1: fires when > 5 failed requests in a 15-minute window. Severity 1 (critical).
 resource "azurerm_monitor_metric_alert" "high_error_rate" {
   name                = "alert-high-errors-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
   scopes              = [azurerm_application_insights.main.id]
   description         = "Failed request count exceeds 5 in 15-minute window"
-  severity            = 1
-  frequency           = "PT5M"
-  window_size         = "PT15M"
-  auto_mitigate       = true
+  severity            = 1       # 0=critical, 1=error, 2=warning, 3=informational, 4=verbose
+  frequency           = "PT5M"  # How often the rule is evaluated (every 5 min)
+  window_size         = "PT15M" # Rolling window the metric is aggregated over
+  auto_mitigate       = true    # Auto-resolve the alert when condition clears
   enabled             = true
 
   criteria {
@@ -236,6 +269,7 @@ resource "azurerm_monitor_metric_alert" "high_error_rate" {
   tags = local.common_tags
 }
 
+# Alert #2: fires when average response time > 3 seconds over 15 minutes. Severity 2 (warning).
 resource "azurerm_monitor_metric_alert" "slow_response" {
   name                = "alert-slow-response-${local.workload}"
   resource_group_name = azurerm_resource_group.main.name
@@ -252,7 +286,7 @@ resource "azurerm_monitor_metric_alert" "slow_response" {
     metric_name      = "requests/duration"
     aggregation      = "Average"
     operator         = "GreaterThan"
-    threshold        = 3000
+    threshold        = 3000 # Milliseconds (3 seconds)
   }
 
   action {

@@ -6,6 +6,7 @@
 //   - Native Dapr, KEDA event-driven scaling
 //   - Bring your own container — full control of runtime
 
+# Docs: https://developer.hashicorp.com/terraform/language/settings
 terraform {
   required_version = ">= 1.5"
 
@@ -34,12 +35,15 @@ locals {
   }
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group
 resource "azurerm_resource_group" "main" {
   name     = "rg-${local.workload}-aca"
   location = local.location
   tags     = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/log_analytics_workspace
+# Required by the Container App Environment for centralized logging.
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "log-${local.workload}-aca"
   resource_group_name = azurerm_resource_group.main.name
@@ -49,6 +53,9 @@ resource "azurerm_log_analytics_workspace" "main" {
   tags                = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_app_environment
+# Manages a Container App Environment — the shared hosting environment (networking + logging)
+# for one or more Container Apps. Think of it as a lightweight managed Kubernetes cluster.
 resource "azurerm_container_app_environment" "main" {
   name                       = "cae-${local.workload}"
   resource_group_name        = azurerm_resource_group.main.name
@@ -57,16 +64,19 @@ resource "azurerm_container_app_environment" "main" {
   tags                       = local.common_tags
 }
 
+# Docs: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_app
+# Manages a Container App — a serverless container that can scale to zero.
 resource "azurerm_container_app" "nextjs" {
   name                         = "ca-${local.workload}-web"
   container_app_environment_id = azurerm_container_app_environment.main.id
   resource_group_name          = azurerm_resource_group.main.name
-  revision_mode                = "Single"
-  tags                         = local.common_tags
+  revision_mode                = "Single" # Each deploy replaces the previous revision
+
+  tags = local.common_tags
 
   template {
-    min_replicas = 0 # SCALE TO ZERO
-    max_replicas = 5
+    min_replicas = 0 # SCALE TO ZERO — container stops after ~5 min idle. You pay $0.
+    max_replicas = 5 # Burst capacity — KEDA spins up replicas on demand.
 
     container {
       name = "web"
@@ -74,7 +84,7 @@ resource "azurerm_container_app" "nextjs" {
       # requiring a Docker push. Replace with `ghcr.io/${var.github_user}/nextjs-saas:latest`
       # once you've built and pushed your own image (see EP 11 script).
       image  = var.container_image
-      cpu    = 0.5
+      cpu    = 0.5 # 0.5 vCPU per replica
       memory = "1Gi"
 
       env {
@@ -83,20 +93,25 @@ resource "azurerm_container_app" "nextjs" {
       }
     }
 
+    # Docs: https://learn.microsoft.com/en-us/azure/container-apps/scale-app
+    # KEDA HTTP scale rule: if any single replica gets > 50 concurrent requests,
+    # the environment spins up another replica to share the load.
     http_scale_rule {
       name                = "http-rule"
       concurrent_requests = 50
     }
   }
 
+  # Docs: https://learn.microsoft.com/en-us/azure/container-apps/ingress-overview
+  # Ingress exposes the container to the internet and handles TLS termination.
   ingress {
-    external_enabled = true
-    target_port      = 3000
+    external_enabled = true # Public internet access (set false for internal-only services)
+    target_port      = 3000 # Port your app listens on inside the container
     transport        = "auto"
 
     traffic_weight {
       latest_revision = true
-      percentage      = 100
+      percentage      = 100 # 100% of traffic goes to the latest revision
     }
   }
 }
