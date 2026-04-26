@@ -1,0 +1,32 @@
+# EP20 — Horizontal Pod Autoscaler (HPA).
+# Automatically scales pods based on CPU utilization.
+# When CPU exceeds 70% across all pods, Kubernetes adds more pods.
+# When it drops below, pods are removed (down to minReplicas).
+#
+# Docs: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nextjs-saas-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nextjs-saas         # Must match your Helm release name
+  minReplicas: 2              # Never go below 2 (availability)
+  maxReplicas: 10             # Cap at 10 (cost control)
+  metrics:
+    # Scale on CPU — the simplest and most common trigger.
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70   # Add a pod when avg CPU > 70%
+    # Scale on memory — catches memory-hungry workloads.
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80   # Add a pod when avg memory > 80%

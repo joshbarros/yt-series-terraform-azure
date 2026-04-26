@@ -1,0 +1,9 @@
+# Don't send these to the Docker daemon — speeds up builds.
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+.terraform
+terraform.tfstate*

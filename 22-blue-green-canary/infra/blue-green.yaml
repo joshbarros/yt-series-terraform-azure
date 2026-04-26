@@ -1,0 +1,89 @@
+# EP22 — Blue/Green Deployment pattern on Kubernetes.
+#
+# Two identical Deployments (blue + green). A Service points to ONE.
+# To release: deploy new code to the inactive color, test it,
+# then flip the Service selector. Instant rollback = flip back.
+#
+# Docs: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+
+# --- Blue Deployment (currently live) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-saas-blue
+  labels:
+    app: nextjs-saas
+    slot: blue
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextjs-saas
+      slot: blue
+  template:
+    metadata:
+      labels:
+        app: nextjs-saas
+        slot: blue
+    spec:
+      containers:
+        - name: web
+          image: acrtheitguysaas.azurecr.io/nextjs-saas:v1.0.0
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# --- Green Deployment (staging the new version) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-saas-green
+  labels:
+    app: nextjs-saas
+    slot: green
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextjs-saas
+      slot: green
+  template:
+    metadata:
+      labels:
+        app: nextjs-saas
+        slot: green
+    spec:
+      containers:
+        - name: web
+          image: acrtheitguysaas.azurecr.io/nextjs-saas:v2.0.0   # New version!
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# --- Service (the switch) ---
+# Change selector.slot from "blue" to "green" to flip traffic.
+# Rollback = change it back to "blue". Takes ~1 second.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-saas
+spec:
+  type: ClusterIP
+  selector:
+    app: nextjs-saas
+    slot: blue              # <— FLIP THIS to "green" to release
+  ports:
+    - port: 80
+      targetPort: 3000

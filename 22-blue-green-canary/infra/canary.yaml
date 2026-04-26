@@ -1,0 +1,103 @@
+# EP22 — Canary Deployment pattern on Kubernetes.
+#
+# Route a small % of traffic to the new version. If metrics are healthy,
+# gradually increase. If something breaks, the blast radius is tiny.
+#
+# This uses NGINX Ingress annotations for traffic splitting.
+# For advanced canary, consider Argo Rollouts or Flagger.
+
+# Stable deployment (current version — gets most traffic)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-saas-stable
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nextjs-saas
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: nextjs-saas
+        track: stable
+    spec:
+      containers:
+        - name: web
+          image: acrtheitguysaas.azurecr.io/nextjs-saas:v1.0.0
+          ports:
+            - containerPort: 3000
+---
+# Canary deployment (new version — gets 10% of traffic)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-saas-canary
+spec:
+  replicas: 1               # Fewer replicas = smaller blast radius
+  selector:
+    matchLabels:
+      app: nextjs-saas
+      track: canary
+  template:
+    metadata:
+      labels:
+        app: nextjs-saas
+        track: canary
+    spec:
+      containers:
+        - name: web
+          image: acrtheitguysaas.azurecr.io/nextjs-saas:v2.0.0   # New version
+          ports:
+            - containerPort: 3000
+---
+# Service for stable (main traffic)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-saas
+spec:
+  selector:
+    app: nextjs-saas
+    track: stable
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+# Service for canary (used by ingress canary annotation)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-saas-canary
+spec:
+  selector:
+    app: nextjs-saas
+    track: canary
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+# Ingress with canary traffic splitting (NGINX)
+# 10% of traffic goes to the canary service.
+# Increase the weight as confidence grows: 10 → 25 → 50 → 100.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nextjs-saas-canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"    # 10% to canary
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.theitguy.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nextjs-saas-canary
+                port:
+                  number: 80

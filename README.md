@@ -19,6 +19,23 @@ Companion repo for the YouTube series. Each folder is a standalone, runnable sna
 | `11-container-apps/` | EP 11 — Azure Container Apps | ACA Environment + Container App (scale-to-zero) |
 | `12-multi-region-frontdoor/` | EP 12 — Global SaaS with Front Door | Multi-region web apps + Front Door + Health Probes |
 
+### Arc 2: Scale Up (One → Team → Kubernetes)
+
+| Folder | Episode | Adds |
+|--------|---------|------|
+| `13-azure-devops/` | EP 13 — Azure DevOps Pipelines | ADO multi-stage pipeline + Service Connection |
+| `14-docker/` | EP 14 — Docker for Azure Developers | Multi-stage Dockerfile + .dockerignore |
+| `15-container-registry/` | EP 15 — Azure Container Registry | ACR + RBAC roles (AcrPush/AcrPull) |
+| `16-container-apps-deep-dive/` | EP 16 — Container Apps Deep Dive | Multi-container (web + worker) + secrets + revisions |
+| `17-aks-first-cluster/` | EP 17 — Your First AKS Cluster | AKS + node pool + autoscaling + Container Insights |
+| `18-helm-charts/` | EP 18 — Helm Charts for SaaS | Chart structure + Deployment + Service templates |
+| `19-aks-ingress-cert-manager/` | EP 19 — Ingress + cert-manager | NGINX Ingress + Let's Encrypt auto-TLS |
+| `20-hpa-keda/` | EP 20 — HPA + KEDA Autoscaling | CPU/memory HPA + event-driven KEDA (scale-to-zero) |
+| `21-aks-keyvault-csi/` | EP 21 — Key Vault CSI Driver | Mount KV secrets as files inside pods |
+| `22-blue-green-canary/` | EP 22 — Blue/Green + Canary Deploys | Zero-downtime release patterns |
+| `23-aks-monitoring/` | EP 23 — Prometheus + Grafana | kube-prometheus-stack (full observability) |
+| `24-production-aks/` | EP 24 — Production AKS (Finale) | Azure CNI + Calico + multi-AZ + resource quotas |
+
 ## Standards applied across the lab
 
 Every `.tf` follows these rules so the patterns transfer directly to production:

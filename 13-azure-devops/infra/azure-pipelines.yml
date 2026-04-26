@@ -1,0 +1,89 @@
+# EP13 — Azure DevOps multi-stage pipeline.
+# Replaces GitHub Actions with ADO Pipelines for enterprise teams.
+#
+# Prerequisites:
+#   - Azure DevOps organization + project created
+#   - Service Connection "azure-saas" configured (type: Azure Resource Manager)
+#   - Repo imported into Azure Repos (or linked via GitHub connector)
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: "ubuntu-latest"
+
+# Stage 1: Terraform Plan (runs on every push)
+stages:
+  - stage: Terraform
+    displayName: "Terraform Plan"
+    jobs:
+      - job: Plan
+        displayName: "Init → Validate → Plan"
+        steps:
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform 1.9"
+            inputs:
+              terraformVersion: "1.9.0"
+
+          - task: TerraformTaskV4@4
+            displayName: "terraform init"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/infra"
+              backendServiceArm: "azure-saas"
+              backendAzureRmResourceGroupName: "rg-tfstate"
+              backendAzureRmStorageAccountName: "$(TF_STATE_STORAGE)"
+              backendAzureRmContainerName: "tfstate"
+              backendAzureRmKey: "saas.tfstate"
+
+          - script: |
+              cd infra
+              terraform fmt -check
+              terraform validate
+            displayName: "fmt check + validate"
+
+          - task: TerraformTaskV4@4
+            displayName: "terraform plan"
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/infra"
+              environmentServiceNameAzureRM: "azure-saas"
+              commandOptions: "-input=false -no-color"
+
+  # Stage 2: Build + Deploy (runs after Terraform, on main only)
+  - stage: Deploy
+    displayName: "Build & Deploy Next.js"
+    dependsOn: Terraform
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployWeb
+        displayName: "Deploy to App Service"
+        environment: "production"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: NodeTool@0
+                  displayName: "Use Node 20"
+                  inputs:
+                    versionSpec: "20.x"
+
+                - script: |
+                    npm ci
+                    npm run build
+                  displayName: "Install + Build"
+
+                - task: AzureWebApp@1
+                  displayName: "Deploy to Azure App Service"
+                  inputs:
+                    azureSubscription: "azure-saas"
+                    appType: "webAppLinux"
+                    appName: "$(AZURE_WEBAPP_NAME)"
+                    package: "$(System.DefaultWorkingDirectory)"
+                    runtimeStack: "NODE|20-lts"

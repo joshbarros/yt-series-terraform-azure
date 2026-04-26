@@ -1,0 +1,28 @@
+# EP20 — KEDA ScaledObject for event-driven autoscaling.
+# KEDA extends Kubernetes autoscaling beyond CPU/memory.
+# This example scales on HTTP request rate (via Prometheus metrics).
+#
+# Docs: https://keda.sh/docs/latest/scalers/
+#
+# Install KEDA first:
+#   helm repo add kedacore https://kedacore.github.io/charts
+#   helm install keda kedacore/keda --namespace keda --create-namespace
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: nextjs-saas-keda
+spec:
+  scaleTargetRef:
+    name: nextjs-saas         # Must match your Deployment name
+  pollingInterval: 15         # Check every 15 seconds
+  cooldownPeriod: 60          # Wait 60s after last scale event before scaling down
+  minReplicaCount: 0          # SCALE TO ZERO when no traffic
+  maxReplicaCount: 10
+  triggers:
+    # Scale on HTTP requests per second (requires Prometheus + nginx metrics).
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-server.monitoring.svc.cluster.local:80
+        metricName: nginx_ingress_controller_requests
+        query: sum(rate(nginx_ingress_controller_requests{exported_service="nextjs-saas"}[1m]))
+        threshold: "50"       # Add a pod per 50 req/s

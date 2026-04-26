@@ -1,0 +1,57 @@
+# EP18 — Default values for the Next.js SaaS Helm chart.
+# Override per environment: helm install -f values-prod.yaml
+
+# Container image — points to your ACR from EP15.
+image:
+  repository: acrtheitguysaas.azurecr.io/nextjs-saas
+  tag: latest
+  pullPolicy: Always
+
+# How many pods to run.
+replicaCount: 2
+
+# Resource requests + limits — prevents one pod from starving others.
+resources:
+  requests:
+    cpu: "100m"       # 0.1 vCPU minimum guaranteed
+    memory: "256Mi"   # 256MB minimum guaranteed
+  limits:
+    cpu: "500m"       # 0.5 vCPU maximum
+    memory: "512Mi"   # 512MB maximum
+
+# Service — how the cluster routes traffic to your pods.
+service:
+  type: ClusterIP     # Internal only — ingress handles external traffic
+  port: 80
+  targetPort: 3000    # Port your Next.js app listens on
+
+# Ingress — handled separately in EP19.
+ingress:
+  enabled: false
+
+# Environment variables injected into the pod.
+env:
+  NODE_ENV: production
+  PORT: "3000"
+
+# Health checks — Kubernetes restarts unhealthy pods automatically.
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Horizontal Pod Autoscaler — configured in EP20.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

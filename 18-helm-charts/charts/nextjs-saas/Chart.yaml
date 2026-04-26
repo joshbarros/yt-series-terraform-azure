@@ -1,0 +1,8 @@
+# EP18 — Helm chart for the Next.js SaaS app.
+# Helm is a package manager for Kubernetes — like npm for your cluster.
+apiVersion: v2
+name: nextjs-saas
+description: Next.js SaaS application Helm chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
