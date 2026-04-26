@@ -72,3 +72,15 @@ resource "azurerm_service_plan" "main" {
 
 # (Add: web app, postgres, monitoring resources — same as EP5 but parameterized
 #  via var.db_sku, var.db_storage_mb, var.log_retention, etc.)
+
+output "resource_group_name" {
+  value = azurerm_resource_group.main.name
+}
+
+output "environment" {
+  value = var.environment
+}
+
+output "workspace" {
+  value = terraform.workspace
+}

@@ -65,3 +65,12 @@ resource "azurerm_role_assignment" "kv_reader_app" {
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_linux_web_app.main.identity[0].principal_id
 }
+
+output "key_vault_uri" {
+  value = azurerm_key_vault.main.vault_uri
+}
+
+output "secret_uri" {
+  value     = azurerm_key_vault_secret.database_url.id
+  sensitive = true
+}
