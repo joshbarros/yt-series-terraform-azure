@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!example.tfvars
+.terraform.lock.hcl
+
+# OS
+.DS_Store

@@ -1,0 +1,9 @@
+# Helm
+*.tgz
+charts/*.lock
+.DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
