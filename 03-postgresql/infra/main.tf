@@ -78,7 +78,7 @@ resource "azurerm_linux_web_app" "main" {
 
   site_config {
     application_stack {
-      node_version = "20-lts"
+      node_version = "22-lts"
     }
     app_command_line                  = "npm run start"
     always_on                         = true
@@ -92,7 +92,7 @@ resource "azurerm_linux_web_app" "main" {
   # DATABASE_URL wires the web app to the Postgres server created below.
   # The value is assembled from the server's FQDN + the sensitive password variable.
   app_settings = {
-    WEBSITE_NODE_DEFAULT_VERSION   = "~20"
+    WEBSITE_NODE_DEFAULT_VERSION   = "~22"
     SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
     DATABASE_URL                   = "postgresql://psqladmin:${var.db_password}@${azurerm_postgresql_flexible_server.main.fqdn}:5432/saasdb?sslmode=require"
   }

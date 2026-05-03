@@ -63,10 +63,45 @@ variable "grafana_password" {
   sensitive   = true
 }
 
-output "grafana_access" {
-  value = "kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80 — then open http://localhost:3000 (admin / <your password>)"
+output "grafana_url" {
+  description = "Port-forward command + URL to open Grafana in your browser"
+  value       = <<-EOT
+    Step 1 — Run this in a terminal:
+      kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
+
+    Step 2 — Open in your browser:
+      http://localhost:3000
+
+    Step 3 — Login:
+      Username: admin
+      Password: (the grafana_password you set in tfvars)
+  EOT
 }
 
-output "prometheus_access" {
-  value = "kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090"
+output "prometheus_url" {
+  description = "Port-forward command + URL to open Prometheus in your browser"
+  value       = <<-EOT
+    Step 1 — Run this in a terminal:
+      kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090
+
+    Step 2 — Open in your browser:
+      http://localhost:9090
+  EOT
+}
+
+output "alertmanager_url" {
+  description = "Port-forward command + URL to open AlertManager in your browser"
+  value       = <<-EOT
+    Step 1 — Run this in a terminal:
+      kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-alertmanager 9093:9093
+
+    Step 2 — Open in your browser:
+      http://localhost:9093
+  EOT
+}
+
+output "grafana_password" {
+  description = "Grafana admin password (sensitive)"
+  value       = var.grafana_password
+  sensitive   = true
 }

@@ -109,7 +109,7 @@ resource "azurerm_linux_web_app" "main" {
 
   site_config {
     application_stack {
-      node_version = "20-lts"
+      node_version = "22-lts"
     }
     app_command_line                  = "npm run start"
     always_on                         = true
@@ -123,7 +123,7 @@ resource "azurerm_linux_web_app" "main" {
   # APPLICATIONINSIGHTS_CONNECTION_STRING is auto-read by the App Insights SDK
   # when the app starts (via instrumentation.ts). No manual wiring in code.
   app_settings = {
-    WEBSITE_NODE_DEFAULT_VERSION          = "~20"
+    WEBSITE_NODE_DEFAULT_VERSION          = "~22"
     SCM_DO_BUILD_DURING_DEPLOYMENT        = "true"
     DATABASE_URL                          = "postgresql://psqladmin:${var.db_password}@${azurerm_postgresql_flexible_server.main.fqdn}:5432/saasdb?sslmode=require"
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.main.connection_string

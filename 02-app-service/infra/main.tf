@@ -79,7 +79,7 @@ resource "azurerm_linux_web_app" "main" {
   site_config {
     # Runtime stack: which language + version the platform container runs.
     application_stack {
-      node_version = "20-lts"
+      node_version = "22-lts"
     }
     app_command_line                  = "npm run start" # Startup command for Next.js
     always_on                         = true            # Keep the app loaded (prevents cold-start sleep)
@@ -93,7 +93,7 @@ resource "azurerm_linux_web_app" "main" {
   # Docs: https://learn.microsoft.com/en-us/azure/app-service/configure-common#configure-app-settings
   # App settings = environment variables available to your running application.
   app_settings = {
-    WEBSITE_NODE_DEFAULT_VERSION   = "~20"  # Belt-and-suspenders: ensure Node 20 across all subsystems
+    WEBSITE_NODE_DEFAULT_VERSION   = "~22"  # Belt-and-suspenders: ensure Node 20 across all subsystems
     SCM_DO_BUILD_DURING_DEPLOYMENT = "true" # Run npm install + npm run build on Azure after code push
   }
 

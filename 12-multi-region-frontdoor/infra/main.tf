@@ -82,7 +82,7 @@ resource "azurerm_linux_web_app" "regional" {
 
   site_config {
     application_stack {
-      node_version = "20-lts"
+      node_version = "22-lts"
     }
     always_on                         = true
     health_check_path                 = "/api/health" # Front Door probes this path

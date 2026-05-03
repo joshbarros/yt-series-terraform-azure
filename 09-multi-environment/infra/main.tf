@@ -74,13 +74,34 @@ resource "azurerm_service_plan" "main" {
 #  via var.db_sku, var.db_storage_mb, var.log_retention, etc.)
 
 output "resource_group_name" {
-  value = azurerm_resource_group.main.name
+  description = "Name of the Azure Resource Group for this environment"
+  value       = azurerm_resource_group.main.name
 }
 
 output "environment" {
-  value = var.environment
+  description = "Current deployment environment (dev, staging, prod)"
+  value       = var.environment
 }
 
 output "workspace" {
-  value = terraform.workspace
+  description = "Active Terraform workspace name"
+  value       = terraform.workspace
+}
+
+output "next_step" {
+  description = "How to deploy another environment using this same codebase"
+  value       = <<-EOT
+    To deploy another environment, run:
+
+      terraform workspace new staging
+      terraform apply -var-file=../envs/staging.tfvars
+
+    Available environments:
+      terraform workspace new dev      && terraform apply -var-file=../envs/dev.tfvars
+      terraform workspace new staging  && terraform apply -var-file=../envs/staging.tfvars
+      terraform workspace new prod     && terraform apply -var-file=../envs/prod.tfvars
+
+    To switch between existing environments:
+      terraform workspace select dev
+  EOT
 }
